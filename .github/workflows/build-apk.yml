@@ -1,9 +1,7 @@
 name: Build GenieX Chat APK
 
 on:
-  # Actions sekmesinden tek tıkla manuel başlatma imkanı sağlar
   workflow_dispatch:
-  # İlgili dallara yeni kod gönderildiğinde otomatik çalışır
   push:
     branches:
       - release
@@ -28,19 +26,25 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Android SDK ve NDK Ortamını Hazırla
-        uses: android-actions/setup-android@v3
-
-      - name: Gerekli NDK ve CMake Paketlerini Doğrula
+      - name: Android SDK Lisanslarını Onayla ve NDK Kur
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;26.1.10909125" "cmake;3.22.1"
+          # Sunucudaki mevcut sdkmanager aracını bul
+          SDKMANAGER=$(find $ANDROID_HOME/cmdline-tools -name "sdkmanager" | head -n 1)
+          echo "Kullanılan sdkmanager: $SDKMANAGER"
+          
+          # Tüm SDK lisanslarını otomatik onayla (Gradle eksik paketleri kendi indirebilsin diye)
+          yes | $SDKMANAGER --licenses > /dev/null || true
+          
+          # Gerekli temel paketleri ve NDK'yı yükle
+          $SDKMANAGER "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;26.1.10909125" "cmake;3.22.1"
 
       - name: Android Proje Dizinini Otomatik Tespit Et
         id: find_project
         run: |
           if [ -f "geniex_chat_android/settings.gradle" ] || [ -f "geniex_chat_android/settings.gradle.kts" ]; then
             PROJECT_DIR="geniex_chat_android"
+          elif [ -f "apps/geniex_chat_android/settings.gradle" ] || [ -f "apps/geniex_chat_android/settings.gradle.kts" ]; then
+            PROJECT_DIR="apps/geniex_chat_android"
           elif [ -f "settings.gradle" ] || [ -f "settings.gradle.kts" ]; then
             PROJECT_DIR="."
           else
