@@ -24,14 +24,18 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
+
+      - name: Set up Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
 
       - name: Accept Android SDK Licenses and Install NDK
         run: |
           SDKMANAGER=$(find $ANDROID_HOME/cmdline-tools -name "sdkmanager" | head -n 1)
           echo "Using sdkmanager: $SDKMANAGER"
           yes | $SDKMANAGER --licenses > /dev/null || true
-          $SDKMANAGER "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;26.1.10909125" "cmake;3.22.1"
+          $SDKMANAGER "platform-tools" "platforms;android-34" "platforms;android-35" "build-tools;34.0.0" "build-tools;35.0.0" "ndk;26.1.10909125" "cmake;3.22.1"
 
       - name: Locate Android Project Directory
         id: find_project
@@ -52,21 +56,12 @@ jobs:
           echo "Found project directory: $PROJECT_DIR"
           echo "dir=$PROJECT_DIR" >> $GITHUB_OUTPUT
 
-      - name: Prepare Gradle Wrapper
-        working-directory: ${{ steps.find_project.outputs.dir }}
-        run: |
-          if [ ! -f "./gradlew" ]; then
-            echo "gradlew not found, generating wrapper..."
-            gradle wrapper
-          fi
-          chmod +x ./gradlew
-
       - name: Assemble Debug APK
         working-directory: ${{ steps.find_project.outputs.dir }}
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
         run: |
-          ./gradlew assembleDebug --stacktrace --no-daemon
+          gradle assembleDebug --stacktrace --no-daemon
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
